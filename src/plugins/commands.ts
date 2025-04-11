@@ -2,7 +2,6 @@ import { Context, h } from 'koishi'
 import { Config, logger } from '..'
 import type {} from '../service/model'
 import { HumanMessage } from '@langchain/core/messages'
-import {} from '..'
 import {
     getCurrentWeekday,
     getMessageContent,
