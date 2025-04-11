@@ -13,7 +13,7 @@ export function apply(ctx: Context, config: Config) {
 
     for (const command of enabledCommands) {
         ctx.command(
-            command.command + ' <message: text>',
+            command.command + ' <message:text>',
             command.description
         ).action(async ({ session }, message) => {
             logger.debug(`Received command: ${command.command} ${message}`)
@@ -75,7 +75,20 @@ export function apply(ctx: Context, config: Config) {
 
             logger.debug(`Command result: ${result.content}`)
 
-            return getMessageContent(result.content)
+            const mdRenderer = await ctx.chatluna.renderer.getRenderer('text')
+
+            return await mdRenderer
+                .render(
+                    {
+                        content: getMessageContent(result.content)
+                    },
+                    {
+                        type: 'text'
+                    }
+                )
+                .then((rendered) => {
+                    return rendered.element
+                })
         })
     }
 

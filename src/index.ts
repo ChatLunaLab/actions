@@ -57,8 +57,13 @@ export const Config = Schema.intersect([
                 promptType: Schema.union(['instruction', 'preset'])
                     .default('instruction')
                     .description('提示词类型(instruction: 指令，preset: 预设)'),
-                preset: Schema.dynamic('preset').default('无'),
-                prompt: Schema.string().role('textarea').default('')
+                preset: Schema.dynamic('preset')
+                    .default('无')
+                    .description('选择使用的预设'),
+                prompt: Schema.string()
+                    .role('textarea')
+                    .default('')
+                    .description('自定义提示词')
             })
         )
             .default([])
@@ -79,8 +84,13 @@ export const Config = Schema.intersect([
                 promptType: Schema.union(['instruction', 'preset'])
                     .default('instruction')
                     .description('提示词类型(instruction: 指令，preset: 预设)'),
-                preset: Schema.dynamic('preset').default('无'),
-                prompt: Schema.string().role('textarea').default('')
+                preset: Schema.dynamic('preset')
+                    .default('无')
+                    .description('选择使用的预设'),
+                prompt: Schema.string()
+                    .role('textarea')
+                    .default('')
+                    .description('自定义提示词')
             })
         )
             .default([])
