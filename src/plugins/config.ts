@@ -24,6 +24,11 @@ export async function apply(ctx: Context, config: Config) {
     })
 
     ctx.schema.set('model', Schema.union(getModelNames(ctx.chatluna.platform)))
+    const presets = await ctx.chatluna.preset.getAllPreset(false)
+    ctx.schema.set(
+        'preset',
+        Schema.union(presets.map((preset) => Schema.const(preset)))
+    )
 }
 
 function getModelNames(service: PlatformService) {

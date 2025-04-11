@@ -13,10 +13,27 @@ export function apply(ctx: Context, config: Config) {
 
     for (const command of enabledCommands) {
         ctx.command(
-            command.command + ' <message: string>',
+            command.command + ' <message: text>',
             command.description
         ).action(async ({ session }, message) => {
             logger.debug(`Received command: ${command.command} ${message}`)
+            const elements = h.parse(message)
+
+            const transformedMessage =
+                await ctx.chatluna.messageTransformer.transform(
+                    session,
+                    elements
+                )
+
+            const humanMessage = new HumanMessage({
+                content: transformedMessage.content,
+                name: transformedMessage.name,
+                id: session.userId,
+                additional_kwargs: {
+                    ...transformedMessage.additional_kwargs
+                }
+            })
+
             const preset =
                 command.promptType === 'instruction'
                     ? command.prompt
@@ -30,7 +47,7 @@ export function apply(ctx: Context, config: Config) {
             const chatLunaConfig = ctx.chatluna.config
 
             const result = await chain.invoke({
-                input: new HumanMessage(message),
+                input: humanMessage,
                 chat_history: [],
                 variables: {
                     name: chatLunaConfig.botNames[0],
@@ -96,9 +113,23 @@ export function apply(ctx: Context, config: Config) {
 
         const chatLunaConfig = ctx.chatluna.config
 
-        // TODO: parse image
+        const transformedMessage =
+            await ctx.chatluna.messageTransformer.transform(
+                session,
+                session.elements
+            )
+
+        const humanMessage = new HumanMessage({
+            content: transformedMessage.content,
+            name: transformedMessage.name,
+            id: session.userId,
+            additional_kwargs: {
+                ...transformedMessage.additional_kwargs
+            }
+        })
+
         const result = await chain.invoke({
-            input: new HumanMessage(session.content),
+            input: humanMessage,
             chat_history: [],
             variables: {
                 name: chatLunaConfig.botNames[0],
