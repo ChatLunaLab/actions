@@ -99,6 +99,11 @@ export function apply(ctx: Context, config: Config) {
 
     ctx.before('send', async (session, options) => {
         let scope: string = session.scope ?? options.session['scope']
+
+        if (scope == null) {
+            return
+        }
+
         // remove last
         scope = scope.split('.').slice(1, -1).join('.')
         const command = ctx.$commander.resolve(scope, session)
