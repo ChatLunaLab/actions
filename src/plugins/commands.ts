@@ -98,7 +98,7 @@ export function apply(ctx: Context, config: Config) {
     )
 
     ctx.before('send', async (session, options) => {
-        let scope: string = session.scope ?? options.session['scope']
+        let scope: string = session.scope ?? options?.session?.['scope']
 
         if (scope == null) {
             return
