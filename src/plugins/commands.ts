@@ -17,7 +17,11 @@ export function apply(ctx: Context, config: Config) {
             command.description
         ).action(async ({ session }, message) => {
             logger.debug(`Received command: ${command.command} ${message}`)
-            message = message == null ? ' ' : message
+
+            if (message == null || message === '') {
+                return
+            }
+
             const elements = h.parse(message)
 
             const transformedMessage =
