@@ -46,7 +46,8 @@ export function apply(ctx: Context, config: Config) {
             const chain = await ctx.chatluna_action_model.getChain(
                 command.command,
                 command.model,
-                preset
+                preset,
+                command.chatMode
             )
 
             const chatLunaConfig = ctx.chatluna.config
@@ -131,7 +132,8 @@ export function apply(ctx: Context, config: Config) {
         const chain = await ctx.chatluna_action_model.getChain(
             interceptCommand.command,
             interceptCommand.model,
-            preset
+            preset,
+            interceptCommand.chatMode
         )
 
         const chatLunaConfig = ctx.chatluna.config

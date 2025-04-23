@@ -7,7 +7,15 @@ import {
     ChatLunaChatPrompt,
     ChatLunaChatPromptFormat
 } from 'koishi-plugin-chatluna/llm-core/chain/prompt'
-import { Runnable, RunnableConfig } from '@langchain/core/runnables'
+import {
+    Runnable,
+    RunnableConfig,
+    RunnableLambda
+} from '@langchain/core/runnables'
+import {
+    AgentExecutor,
+    createOpenAIAgent
+} from 'koishi-plugin-chatluna/llm-core/agent'
 
 export class ModelService extends Service {
     private _chains: Record<
@@ -27,7 +35,8 @@ export class ModelService extends Service {
     async getChain(
         key: string,
         model: string,
-        prompt: (() => Promise<PresetTemplate>) | string
+        prompt: (() => Promise<PresetTemplate>) | string,
+        chatMode: 'chat' | 'plugin' = 'chat'
     ) {
         if (this._chains[key]) {
             return this._chains[key]
@@ -58,11 +67,51 @@ export class ModelService extends Service {
                 llm.getModelMaxContextSize()
         })
 
-        const chain = chatPrompt.pipe(llm)
+        if (chatMode === 'plugin') {
+            const chain = chatPrompt.pipe(llm)
 
-        this._chains[key] = chain
+            this._chains[key] = chain
+        } else {
+            const embeddings = await this._createEmbeddings()
+            const tools = await Promise.all(
+                this.ctx.chatluna.platform
+                    .getTools()
+                    .map((tool) =>
+                        this.ctx.chatluna.platform
+                            .getTool(tool)
+                            .createTool({ model: llm, embeddings })
+                    )
+            )
 
-        return chain
+            const executor = AgentExecutor.fromAgentAndTools({
+                tags: ['openai-functions'],
+                agent: createOpenAIAgent({
+                    llm,
+                    tools,
+                    prompt: chatPrompt
+                }),
+                tools,
+                memory: undefined,
+                verbose: false
+            })
+
+            this._chains[key] = RunnableLambda.from(async (input) => {
+                const output = await executor.invoke(input)
+                return new AIMessageChunk({
+                    content: output.output
+                })
+            })
+        }
+
+        return this._chains[key]
+    }
+
+    private async _createEmbeddings() {
+        const [platform, modelName] = parseRawModelName(
+            this.ctx.chatluna.config.defaultEmbeddings
+        )
+
+        return await this.ctx.chatluna.createEmbeddings(platform, modelName)
     }
 }
 

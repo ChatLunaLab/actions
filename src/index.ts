@@ -25,6 +25,7 @@ export interface Config {
         model: string
         command: string
         description: string
+        chatMode: 'chat' | 'plugin'
         promptType: 'instruction' | 'preset'
         prompt?: string
         preset?: string
@@ -33,6 +34,7 @@ export interface Config {
         interceptPosition: 'before' | 'after'
         enabled: boolean
         model: string
+        chatMode: 'chat' | 'plugin'
         command: string
         promptType: 'instruction' | 'preset'
         prompt?: string
@@ -54,6 +56,11 @@ export const Config = Schema.intersect([
                 description: Schema.string()
                     .default('')
                     .description('指令的描述'),
+                chatMode: Schema.union(['chat', 'plugin'])
+                    .default('chat')
+                    .description(
+                        '指令的聊天模式(chat: 聊天模式，plugin: 插件模式)'
+                    ),
                 promptType: Schema.union(['instruction', 'preset'])
                     .default('instruction')
                     .description('提示词类型(instruction: 指令，preset: 预设)'),
@@ -81,6 +88,11 @@ export const Config = Schema.intersect([
                     '执行此命令使用的模型'
                 ),
                 command: Schema.string().description('拦截的指令名称'),
+                chatMode: Schema.union(['chat', 'search', 'plugin'])
+                    .default('chat')
+                    .description(
+                        '指令的聊天模式(chat: 聊天模式，plugin: 插件模式)'
+                    ),
                 promptType: Schema.union(['instruction', 'preset'])
                     .default('instruction')
                     .description('提示词类型(instruction: 指令，preset: 预设)'),
