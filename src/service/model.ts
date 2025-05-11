@@ -68,10 +68,6 @@ export class ModelService extends Service {
         })
 
         if (chatMode === 'plugin') {
-            const chain = chatPrompt.pipe(llm)
-
-            this._chains[key] = chain
-        } else {
             const embeddings = await this._createEmbeddings()
             const tools = await Promise.all(
                 this.ctx.chatluna.platform
@@ -101,6 +97,10 @@ export class ModelService extends Service {
                     content: output.output
                 })
             })
+        } else {
+            const chain = chatPrompt.pipe(llm)
+
+            this._chains[key] = chain
         }
 
         return this._chains[key]
