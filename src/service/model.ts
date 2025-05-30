@@ -64,7 +64,8 @@ export class ModelService extends Service {
             tokenCounter: (text) => llm.getNumTokens(text),
             sendTokenLimit:
                 llm.invocationParams().maxTokenLimit ??
-                llm.getModelMaxContextSize()
+                llm.getModelMaxContextSize(),
+            variableService: this.ctx.chatluna.variable
         })
 
         if (chatMode === 'plugin') {
