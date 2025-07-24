@@ -4,7 +4,7 @@
 
 _ChatLuna 快捷指令动作_
 
-## [![npm](https://img.shields.io/npm/v/koishi-plugin-chatluna-actions)](https://www.npmjs.com/package/koishi-plugin-chatluna-actions) [![npm](https://img.shields.io/npm/dm/koishi-plugin-chatluna-actions)](https://www.npmjs.com/package/koishi-plugin-chatluna-actions) ![node version](https://img.shields.io/badge/node-%3E=18-green) ![github top language](https://img.shields.io/github/languages/top/ChatLunaLab/chatluna-character?logo=github)
+## [![npm](https://img.shields.io/npm/v/koishi-plugin-chatluna-actions)](https://www.npmjs.com/package/koishi-plugin-chatluna-actions) [![npm](https://img.shields.io/npm/dm/koishi-plugin-chatluna-actions)](https://www.npmjs.com/package/koishi-plugin-chatluna-actions) ![node version](https://img.shields.io/badge/node-%3E=18-green) ![github top language](https://img.shields.io/github/languages/top/ChatLunaLab/chatluna-actions?logo=github)
 
 </div>
 
