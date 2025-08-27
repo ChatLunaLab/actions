@@ -48,7 +48,10 @@ export class ModelService extends Service {
                       ({
                           triggerKeyword: [key],
                           rawText: prompt,
-                          messages: [new SystemMessage(prompt)],
+                          messages:
+                              prompt != null || prompt.trim().length > 0
+                                  ? [new SystemMessage(prompt)]
+                                  : [],
                           config: {}
                       }) satisfies PresetTemplate
                 : (prompt as () => Promise<PresetTemplate>)

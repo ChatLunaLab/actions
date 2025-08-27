@@ -11,7 +11,9 @@ export function apply(ctx: Context, config: Config) {
     ctx.on('ready', async () => {
         ctx.plugin(ModelService)
         logger = createLogger(ctx, 'chatluna-actions')
-        await plugins(ctx, config)
+        ctx.inject(['chatluna_action_model'], async (ctx) => {
+            await plugins(ctx, config)
+        })
     })
 }
 
@@ -29,6 +31,7 @@ export interface Config {
         promptType: 'instruction' | 'preset'
         prompt?: string
         preset?: string
+        inputPrompt?: string
     }[]
     interceptCommands: {
         interceptPosition: 'before' | 'after'
@@ -39,6 +42,7 @@ export interface Config {
         promptType: 'instruction' | 'preset'
         prompt?: string
         preset?: string
+        inputPrompt?: string
     }[]
 }
 
@@ -70,7 +74,11 @@ export const Config = Schema.intersect([
                 prompt: Schema.string()
                     .role('textarea')
                     .default('')
-                    .description('自定义提示词')
+                    .description('自定义提示词'),
+                inputPrompt: Schema.string()
+                    .role('textarea')
+                    .default('{input}')
+                    .description('自定义输入提示词')
             })
         )
             .default([])
@@ -102,7 +110,11 @@ export const Config = Schema.intersect([
                 prompt: Schema.string()
                     .role('textarea')
                     .default('')
-                    .description('自定义提示词')
+                    .description('自定义提示词'),
+                inputPrompt: Schema.string()
+                    .role('textarea')
+                    .default('{input}')
+                    .description('自定义输入提示词')
             })
         )
             .default([])

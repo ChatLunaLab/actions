@@ -7,6 +7,7 @@ import {
     getMessageContent,
     getNotEmptyString
 } from 'koishi-plugin-chatluna/utils/string'
+import { PromptTemplate } from '@langchain/core/prompts'
 
 export function apply(ctx: Context, config: Config) {
     const enabledCommands = config.commands.filter((command) => command.enabled)
@@ -19,7 +20,7 @@ export function apply(ctx: Context, config: Config) {
             logger.debug(`Received command: ${command.command} ${message}`)
 
             if (message == null || message === '') {
-                return
+                message = '[ ]'
             }
 
             const elements = h.parse(message)
@@ -30,8 +31,14 @@ export function apply(ctx: Context, config: Config) {
                     elements
                 )
 
+            const inputPrompt = PromptTemplate.fromTemplate(
+                command.inputPrompt ?? '{input}'
+            )
+
             const humanMessage = new HumanMessage({
-                content: transformedMessage.content,
+                content: await inputPrompt.format({
+                    input: transformedMessage.content
+                }),
                 name: transformedMessage.name,
                 id: session.userId,
                 additional_kwargs: {
@@ -79,7 +86,9 @@ export function apply(ctx: Context, config: Config) {
                 }
             })
 
-            logger.debug(`Command result: ${result.content}`)
+            if (result.content.length < 500) {
+                logger.debug(`Command result: ${result.content}`)
+            }
 
             const mdRenderer = await ctx.chatluna.renderer.getRenderer('text')
 
