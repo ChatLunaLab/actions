@@ -28,17 +28,29 @@ export function apply(ctx: Context, config: Config) {
             const transformedMessage =
                 await ctx.chatluna.messageTransformer.transform(
                     session,
-                    elements
+                    elements,
+                    command.model
                 )
 
             const inputPrompt = PromptTemplate.fromTemplate(
                 command.inputPrompt ?? '{input}'
             )
 
+            const formattedInputPrompt = await inputPrompt.format({
+                input: getMessageContent(transformedMessage.content)
+            })
+
             const humanMessage = new HumanMessage({
-                content: await inputPrompt.format({
-                    input: transformedMessage.content
-                }),
+                content:
+                    typeof transformedMessage.content === 'string'
+                        ? formattedInputPrompt
+                        : transformedMessage.content.map((part) => {
+                              if (part.type !== 'text') {
+                                  return part
+                              }
+                              part.text = formattedInputPrompt
+                              return part
+                          }),
                 name: transformedMessage.name,
                 id: session.userId,
                 additional_kwargs: {
@@ -150,11 +162,29 @@ export function apply(ctx: Context, config: Config) {
         const transformedMessage =
             await ctx.chatluna.messageTransformer.transform(
                 session,
-                session.elements
+                session.elements,
+                interceptCommand.model
             )
 
+        const inputPrompt = PromptTemplate.fromTemplate(
+            interceptCommand.inputPrompt ?? '{input}'
+        )
+
+        const formattedInputPrompt = await inputPrompt.format({
+            input: getMessageContent(transformedMessage.content)
+        })
+
         const humanMessage = new HumanMessage({
-            content: transformedMessage.content,
+            content:
+                typeof transformedMessage.content === 'string'
+                    ? formattedInputPrompt
+                    : transformedMessage.content.map((part) => {
+                          if (part.type !== 'text') {
+                              return part
+                          }
+                          part.text = formattedInputPrompt
+                          return part
+                      }),
             name: transformedMessage.name,
             id: session.userId,
             additional_kwargs: {
