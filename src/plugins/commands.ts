@@ -17,6 +17,12 @@ export function apply(ctx: Context, config: Config) {
             command.command + ' <message:text>',
             command.description
         ).action(async ({ session }, message) => {
+            if (
+                command.model === null ||
+                ctx.chatluna.platform.getModelInfo(command.model) == null
+            ) {
+                return '此命令没有选择模型，请联系管理员配置模型并重置。'
+            }
             logger.debug(`Received command: ${command.command} ${message}`)
 
             if (message == null || message === '') {
@@ -40,17 +46,19 @@ export function apply(ctx: Context, config: Config) {
                 input: getMessageContent(transformedMessage.content)
             })
 
-            const humanMessage = new HumanMessage({
-                content:
-                    typeof transformedMessage.content === 'string'
-                        ? formattedInputPrompt
-                        : transformedMessage.content.map((part) => {
-                              if (part.type !== 'text') {
-                                  return part
-                              }
-                              part.text = formattedInputPrompt
+            const finalMessageContent =
+                typeof transformedMessage.content === 'string'
+                    ? formattedInputPrompt
+                    : transformedMessage.content.map((part) => {
+                          if (part.type !== 'text') {
                               return part
-                          }),
+                          }
+                          part.text = formattedInputPrompt
+                          return part
+                      })
+
+            const humanMessage = new HumanMessage({
+                content: finalMessageContent,
                 name: transformedMessage.name,
                 id: session.userId,
                 additional_kwargs: {
@@ -143,6 +151,13 @@ export function apply(ctx: Context, config: Config) {
         )
 
         if (!interceptCommand) {
+            return
+        }
+
+        if (
+            interceptCommand.model === null ||
+            ctx.chatluna.platform.getModelInfo(interceptCommand.model) == null
+        ) {
             return
         }
 
