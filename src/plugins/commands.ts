@@ -70,7 +70,8 @@ export function apply(ctx: Context, config: Config) {
                 command.promptType === 'instruction'
                     ? command.prompt
                     : () => ctx.chatluna.preset.getPreset(command.preset)
-            const chain = await ctx.chatluna_action_model.getChain(
+
+            const [chain, llm] = await ctx.chatluna_action_model.getChain(
                 command.command,
                 command.model,
                 preset,
@@ -79,32 +80,41 @@ export function apply(ctx: Context, config: Config) {
 
             const chatLunaConfig = ctx.chatluna.config
 
-            const result = await chain.invoke({
-                input: humanMessage,
-                chat_history: [],
-                variables: {
-                    name: chatLunaConfig.botNames[0],
-                    date: new Date().toLocaleString(),
-                    bot_id: session.bot.selfId,
-                    is_group: (
-                        !session.isDirect || session.guildId != null
-                    ).toString(),
-                    is_private: session.isDirect?.toString(),
-                    user_id:
-                        session.author?.user?.id ??
-                        session.event?.user?.id ??
-                        '0',
-                    user: getNotEmptyString(
-                        session.author?.nick,
-                        session.author?.name,
-                        session.event.user?.name,
-                        session.username
-                    ),
-                    noop: '',
-                    time: new Date().toLocaleTimeString(),
-                    weekday: getCurrentWeekday()
+            const result = await chain.invoke(
+                {
+                    input: humanMessage,
+                    chat_history: [],
+                    variables: {
+                        name: chatLunaConfig.botNames[0],
+                        date: new Date().toLocaleString(),
+                        bot_id: session.bot.selfId,
+                        is_group: (
+                            !session.isDirect || session.guildId != null
+                        ).toString(),
+                        is_private: session.isDirect?.toString(),
+                        user_id:
+                            session.author?.user?.id ??
+                            session.event?.user?.id ??
+                            '0',
+                        user: getNotEmptyString(
+                            session.author?.nick,
+                            session.author?.name,
+                            session.event.user?.name,
+                            session.username
+                        ),
+                        noop: '',
+                        time: new Date().toLocaleTimeString(),
+                        weekday: getCurrentWeekday()
+                    }
+                },
+                {
+                    metadata: {
+                        session,
+                        model: llm,
+                        userId: session.userId
+                    }
                 }
-            })
+            )
 
             if (result.content.length < 500) {
                 logger.debug(`Command result: ${result.content}`)
@@ -165,7 +175,8 @@ export function apply(ctx: Context, config: Config) {
             interceptCommand.promptType === 'instruction'
                 ? interceptCommand.prompt
                 : () => ctx.chatluna.preset.getPreset(interceptCommand.preset)
-        const chain = await ctx.chatluna_action_model.getChain(
+
+        const [chain, llm] = await ctx.chatluna_action_model.getChain(
             interceptCommand.command,
             interceptCommand.model,
             preset,
@@ -207,30 +218,41 @@ export function apply(ctx: Context, config: Config) {
             }
         })
 
-        const result = await chain.invoke({
-            input: humanMessage,
-            chat_history: [],
-            variables: {
-                name: chatLunaConfig.botNames[0],
-                date: new Date().toLocaleString(),
-                bot_id: session.bot.selfId,
-                is_group: (
-                    !session.isDirect || session.guildId != null
-                ).toString(),
-                is_private: session.isDirect?.toString(),
-                user_id:
-                    session.author?.user?.id ?? session.event?.user?.id ?? '0',
-                user: getNotEmptyString(
-                    session.author?.nick,
-                    session.author?.name,
-                    session.event.user?.name,
-                    session.username
-                ),
-                noop: '',
-                time: new Date().toLocaleTimeString(),
-                weekday: getCurrentWeekday()
+        const result = await chain.invoke(
+            {
+                input: humanMessage,
+                chat_history: [],
+                variables: {
+                    name: chatLunaConfig.botNames[0],
+                    date: new Date().toLocaleString(),
+                    bot_id: session.bot.selfId,
+                    is_group: (
+                        !session.isDirect || session.guildId != null
+                    ).toString(),
+                    is_private: session.isDirect?.toString(),
+                    user_id:
+                        session.author?.user?.id ??
+                        session.event?.user?.id ??
+                        '0',
+                    user: getNotEmptyString(
+                        session.author?.nick,
+                        session.author?.name,
+                        session.event.user?.name,
+                        session.username
+                    ),
+                    noop: '',
+                    time: new Date().toLocaleTimeString(),
+                    weekday: getCurrentWeekday()
+                }
+            },
+            {
+                metadata: {
+                    session,
+                    model: llm,
+                    userId: session.userId
+                }
             }
-        })
+        )
 
         logger.debug(`Command result: ${result.content}`)
 

@@ -16,16 +16,20 @@ import {
     AgentExecutor,
     createOpenAIAgent
 } from 'koishi-plugin-chatluna/llm-core/agent'
+import { ChatLunaChatModel } from 'koishi-plugin-chatluna/llm-core/platform/model'
 
 export class ModelService extends Service {
     private _chains: Record<
         string,
-        Runnable<
-            ChatLunaChatPromptFormat,
-            AIMessageChunk,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            RunnableConfig<Record<string, any>>
-        >
+        [
+            Runnable<
+                ChatLunaChatPromptFormat,
+                AIMessageChunk,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                RunnableConfig<Record<string, any>>
+            >,
+            ChatLunaChatModel
+        ]
     > = {}
 
     constructor(ctx: Context, config: Config) {
@@ -79,7 +83,7 @@ export class ModelService extends Service {
                     .map((tool) =>
                         this.ctx.chatluna.platform
                             .getTool(tool)
-                            .createTool({ model: llm, embeddings })
+                            .createTool({ embeddings })
                     )
             )
 
@@ -95,16 +99,19 @@ export class ModelService extends Service {
                 verbose: false
             })
 
-            this._chains[key] = RunnableLambda.from(async (input) => {
-                const output = await executor.invoke(input)
-                return new AIMessageChunk({
-                    content: output.output
-                })
-            })
+            this._chains[key] = [
+                RunnableLambda.from(async (input) => {
+                    const output = await executor.invoke(input)
+                    return new AIMessageChunk({
+                        content: output.output
+                    })
+                }),
+                llm
+            ]
         } else {
             const chain = chatPrompt.pipe(llm)
 
-            this._chains[key] = chain
+            this._chains[key] = [chain, llm]
         }
 
         return this._chains[key]
