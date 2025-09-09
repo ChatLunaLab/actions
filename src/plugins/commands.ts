@@ -116,7 +116,10 @@ export function apply(ctx: Context, config: Config) {
                 }
             )
 
-            if (result.content.length < 500) {
+            if (
+                typeof result.content === 'string' &&
+                result.content.length < 10
+            ) {
                 logger.debug(`Command result: ${result.content}`)
             }
 
@@ -125,7 +128,7 @@ export function apply(ctx: Context, config: Config) {
             return await mdRenderer
                 .render(
                     {
-                        content: getMessageContent(result.content)
+                        content: result.content
                     },
                     {
                         type: 'text'
