@@ -6,7 +6,7 @@ import { ModelType } from 'koishi-plugin-chatluna/llm-core/platform/types'
 
 export async function apply(ctx: Context, config: Config) {
     ctx.on('chatluna/model-added', async (service) => {
-        if (!ctx.scope.isActive) return
+        if (!ctx.lifecycle.isActive) return
         ctx.schema.set('model', Schema.union(getModelNames(service)))
         const presets = await ctx.chatluna.preset.getAllPreset(false)
         ctx.schema.set(
@@ -16,7 +16,7 @@ export async function apply(ctx: Context, config: Config) {
     })
 
     ctx.on('chatluna/model-removed', async (service) => {
-        if (!ctx.scope.isActive) return
+        if (!ctx.lifecycle.isActive) return
         ctx.schema.set('model', Schema.union(getModelNames(service)))
         const presets = await ctx.chatluna.preset.getAllPreset(false)
         ctx.schema.set(
