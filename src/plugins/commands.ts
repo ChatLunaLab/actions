@@ -72,12 +72,14 @@ export function apply(ctx: Context, config: Config) {
                     ? command.prompt
                     : () => ctx.chatluna.preset.getPreset(command.preset)
 
-            const [chain, llm] = await ctx.chatluna_action_model.getChain(
-                command.command,
-                command.model,
-                preset,
-                command.chatMode
-            )
+            const [chain, llm] = await ctx.chatluna_action_model
+                .getChain(
+                    command.command,
+                    command.model,
+                    preset,
+                    command.chatMode
+                )
+                .then((ref) => ref.value)
 
             const chatLunaConfig = ctx.chatluna.config
 
@@ -180,12 +182,14 @@ export function apply(ctx: Context, config: Config) {
                 ? interceptCommand.prompt
                 : () => ctx.chatluna.preset.getPreset(interceptCommand.preset)
 
-        const [chain, llm] = await ctx.chatluna_action_model.getChain(
-            interceptCommand.command,
-            interceptCommand.model,
-            preset,
-            interceptCommand.chatMode
-        )
+        const [chain, llm] = await ctx.chatluna_action_model
+            .getChain(
+                interceptCommand.command,
+                interceptCommand.model,
+                preset,
+                interceptCommand.chatMode
+            )
+            .then((ref) => ref.value)
 
         const chatLunaConfig = ctx.chatluna.config
 

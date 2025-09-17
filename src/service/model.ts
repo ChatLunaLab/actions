@@ -17,19 +17,26 @@ import {
     createOpenAIAgent
 } from 'koishi-plugin-chatluna/llm-core/agent'
 import { ChatLunaChatModel } from 'koishi-plugin-chatluna/llm-core/platform/model'
+import {
+    ChatLunaError,
+    ChatLunaErrorCode
+} from 'koishi-plugin-chatluna/utils/error'
+import { computed, ComputedRef } from 'koishi-plugin-chatluna'
 
 export class ModelService extends Service {
     private _chains: Record<
         string,
-        [
-            Runnable<
-                ChatLunaChatPromptFormat,
-                AIMessageChunk,
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                RunnableConfig<Record<string, any>>
-            >,
-            ChatLunaChatModel
-        ]
+        ComputedRef<
+            [
+                Runnable<
+                    ChatLunaChatPromptFormat,
+                    AIMessageChunk,
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    RunnableConfig<Record<string, any>>
+                >,
+                ChatLunaChatModel
+            ]
+        >
     > = {}
 
     constructor(ctx: Context, config: Config) {
@@ -66,55 +73,78 @@ export class ModelService extends Service {
             currentModelName
         )
 
-        const chatPrompt = new ChatLunaChatPrompt({
-            preset: currentPreset,
-            tokenCounter: (text) => llm.getNumTokens(text),
-            sendTokenLimit:
-                llm.invocationParams().maxTokenLimit ??
-                llm.getModelMaxContextSize(),
-            variableService: this.ctx.chatluna.variable
+        if (llm.value == null) {
+            throw new ChatLunaError(ChatLunaErrorCode.MODEL_NOT_FOUND)
+        }
+
+        await this._createChain(currentPreset, llm, key, chatMode)
+
+        return this._chains[key]
+    }
+
+    private async _createChain(
+        currentPreset: () => Promise<PresetTemplate>,
+        llmRef: ComputedRef<ChatLunaChatModel>,
+        key: string,
+        chatMode: 'chat' | 'plugin'
+    ) {
+        const chatPrompt = computed(() => {
+            const llm = llmRef.value
+            return new ChatLunaChatPrompt({
+                preset: currentPreset,
+                tokenCounter: (text) => llm.getNumTokens(text),
+                sendTokenLimit:
+                    llm.invocationParams().maxTokenLimit ??
+                    llm.getModelMaxContextSize(),
+                variableService: this.ctx.chatluna.variable
+            })
         })
 
         if (chatMode === 'plugin') {
-            const embeddings = await this._createEmbeddings()
-            const tools = await Promise.all(
-                this.ctx.chatluna.platform
-                    .getTools()
-                    .map((tool) =>
-                        this.ctx.chatluna.platform
-                            .getTool(tool)
-                            .createTool({ embeddings })
-                    )
+            const embeddingsRef = await this._createEmbeddings()
+
+            const toolsRef = this.ctx.chatluna.platform.getTools()
+
+            const toolsComputed = computed(() =>
+                toolsRef.value.map((tool) =>
+                    this.ctx.chatluna.platform
+                        .getTool(tool)
+                        .createTool({ embeddings: embeddingsRef.value })
+                )
             )
 
-            const executor = AgentExecutor.fromAgentAndTools({
-                tags: ['openai-functions'],
-                agent: createOpenAIAgent({
-                    llm,
-                    tools,
-                    prompt: chatPrompt
-                }),
-                tools,
-                memory: undefined,
-                verbose: false
+            const executorComputed = computed(() =>
+                AgentExecutor.fromAgentAndTools({
+                    tags: ['openai-functions'],
+                    agent: createOpenAIAgent({
+                        llm: llmRef.value,
+                        tools: toolsComputed.value,
+                        prompt: chatPrompt.value
+                    }),
+                    tools: toolsComputed.value,
+                    memory: undefined,
+                    verbose: false
+                })
+            )
+
+            this._chains[key] = computed(() => {
+                const executor = executorComputed.value
+                return [
+                    RunnableLambda.from(async (input) => {
+                        const output = await executor.invoke(input)
+                        return new AIMessageChunk({
+                            content: output.output
+                        })
+                    }),
+                    llmRef.value
+                ]
             })
-
-            this._chains[key] = [
-                RunnableLambda.from(async (input) => {
-                    const output = await executor.invoke(input)
-                    return new AIMessageChunk({
-                        content: output.output
-                    })
-                }),
-                llm
-            ]
         } else {
-            const chain = chatPrompt.pipe(llm)
-
-            this._chains[key] = [chain, llm]
+            this._chains[key] = computed(() => [
+                chatPrompt.value.pipe(llmRef.value),
+                llmRef.value
+            ])
         }
-
-        return this._chains[key]
     }
 
     private async _createEmbeddings() {
