@@ -19,7 +19,7 @@ export function apply(ctx: Context, config: Config) {
         ).action(async ({ session }, message) => {
             if (
                 command.model === null ||
-                ctx.chatluna.platform.getModelInfo(command.model) == null
+                ctx.chatluna.platform.findModel(command.model) == null
             ) {
                 return '此命令没有选择模型，请联系管理员配置模型并重置。'
             }
@@ -172,7 +172,7 @@ export function apply(ctx: Context, config: Config) {
 
         if (
             interceptCommand.model === null ||
-            ctx.chatluna.platform.getModelInfo(interceptCommand.model) == null
+            ctx.chatluna.platform.findModel(interceptCommand.model) == null
         ) {
             return
         }
