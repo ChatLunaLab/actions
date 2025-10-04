@@ -70,7 +70,7 @@ export function apply(ctx: Context, config: Config) {
             const preset =
                 command.promptType === 'instruction'
                     ? command.prompt
-                    : () => ctx.chatluna.preset.getPreset(command.preset)
+                    : ctx.chatluna.preset.getPreset(command.preset)
 
             const [chain, llm] = await ctx.chatluna_action_model
                 .getChain(
@@ -180,7 +180,7 @@ export function apply(ctx: Context, config: Config) {
         const preset =
             interceptCommand.promptType === 'instruction'
                 ? interceptCommand.prompt
-                : () => ctx.chatluna.preset.getPreset(interceptCommand.preset)
+                : ctx.chatluna.preset.getPreset(interceptCommand.preset)
 
         const [chain, llm] = await ctx.chatluna_action_model
             .getChain(

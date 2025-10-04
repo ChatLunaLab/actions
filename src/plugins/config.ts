@@ -6,7 +6,7 @@ import { modelSchema } from 'koishi-plugin-chatluna/utils/schema'
 export async function apply(ctx: Context, config: Config) {
     modelSchema(ctx)
     const updatePresets = async () => {
-        const presets = await ctx.chatluna.preset.getAllPreset(false)
+        const presets = ctx.chatluna.preset.getAllPreset(false).value
         ctx.schema.set(
             'preset',
             Schema.union(presets.map((preset) => Schema.const(preset)))

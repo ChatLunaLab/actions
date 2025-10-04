@@ -46,7 +46,7 @@ export class ModelService extends Service {
     async getChain(
         key: string,
         model: string,
-        prompt: (() => Promise<PresetTemplate>) | string,
+        prompt: ComputedRef<PresetTemplate> | string,
         chatMode: 'chat' | 'plugin' = 'chat'
     ) {
         if (this._chains[key]) {
@@ -55,17 +55,19 @@ export class ModelService extends Service {
 
         const currentPreset =
             typeof prompt === 'string'
-                ? async () =>
-                      ({
-                          triggerKeyword: [key],
-                          rawText: prompt,
-                          messages:
-                              prompt != null || prompt.trim().length > 0
-                                  ? [new SystemMessage(prompt)]
-                                  : [],
-                          config: {}
-                      }) satisfies PresetTemplate
-                : (prompt as () => Promise<PresetTemplate>)
+                ? computed(
+                      () =>
+                          ({
+                              triggerKeyword: [key],
+                              rawText: prompt,
+                              messages:
+                                  prompt != null || prompt.trim().length > 0
+                                      ? [new SystemMessage(prompt)]
+                                      : [],
+                              config: {}
+                          }) satisfies PresetTemplate
+                  )
+                : prompt
 
         const [platform, currentModelName] = parseRawModelName(model)
         const llm = await this.ctx.chatluna.createChatModel(
@@ -83,7 +85,7 @@ export class ModelService extends Service {
     }
 
     private async _createChain(
-        currentPreset: () => Promise<PresetTemplate>,
+        currentPreset: ComputedRef<PresetTemplate>,
         llmRef: ComputedRef<ChatLunaChatModel>,
         key: string,
         chatMode: 'chat' | 'plugin'
@@ -96,7 +98,7 @@ export class ModelService extends Service {
                 sendTokenLimit:
                     llm.invocationParams().maxTokenLimit ??
                     llm.getModelMaxContextSize(),
-                variableService: this.ctx.chatluna.variable
+                promptRenderService: this.ctx.chatluna.promptRenderer
             })
         })
 
