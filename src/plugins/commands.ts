@@ -29,6 +29,10 @@ export function apply(ctx: Context, config: Config) {
                 message = '[ ]'
             }
 
+            if (!message) {
+                return
+            }
+
             logger.debug(`Received command: ${command.command} ${message}`)
 
             const humanMessage = await transformAndFormatMessage(
