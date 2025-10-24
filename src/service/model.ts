@@ -69,11 +69,7 @@ export class ModelService extends Service {
                   )
                 : prompt
 
-        const [platform, currentModelName] = parseRawModelName(model)
-        const llm = await this.ctx.chatluna.createChatModel(
-            platform,
-            currentModelName
-        )
+        const llm = await this.ctx.chatluna.createChatModel(model)
 
         if (llm.value == null) {
             throw new ChatLunaError(ChatLunaErrorCode.MODEL_NOT_FOUND)

@@ -1,13 +1,14 @@
 import { Context, h } from 'koishi'
 import { Config, logger } from '..'
 import type {} from '../service/model'
-import { HumanMessage } from '@langchain/core/messages'
+import { getMessageContent } from 'koishi-plugin-chatluna/utils/string'
 import {
-    getCurrentWeekday,
-    getMessageContent,
-    getNotEmptyString
-} from 'koishi-plugin-chatluna/utils/string'
-import { PromptTemplate } from '@langchain/core/prompts'
+    buildChainVariables,
+    invokeChain,
+    renderResult,
+    resolvePreset,
+    transformAndFormatMessage
+} from '../utils'
 
 export function apply(ctx: Context, config: Config) {
     const enabledCommands = config.commands.filter((command) => command.enabled)
@@ -19,58 +20,31 @@ export function apply(ctx: Context, config: Config) {
         ).action(async ({ session }, message) => {
             if (
                 command.model === null ||
-                ctx.chatluna.platform.findModel(command.model) == null
+                ctx.chatluna.platform.findModel(command.model).value == null
             ) {
                 return '此命令没有选择模型，请联系管理员配置模型并重置。'
             }
 
-            logger.debug(`Received command: ${command.command} ${message}`)
-
-            if (message == null || message === '') {
+            if ((message == null || message === '') && session.quote) {
                 message = '[ ]'
             }
 
-            const elements = h.parse(message)
+            logger.debug(`Received command: ${command.command} ${message}`)
 
-            const transformedMessage =
-                await ctx.chatluna.messageTransformer.transform(
-                    session,
-                    elements,
-                    command.model
-                )
-
-            const inputPrompt = PromptTemplate.fromTemplate(
-                command.inputPrompt ?? '{input}'
+            const humanMessage = await transformAndFormatMessage(
+                ctx,
+                session,
+                message,
+                command.model,
+                command.inputPrompt
             )
 
-            const formattedInputPrompt = await inputPrompt.format({
-                input: getMessageContent(transformedMessage.content)
-            })
-
-            const finalMessageContent =
-                typeof transformedMessage.content === 'string'
-                    ? formattedInputPrompt
-                    : transformedMessage.content.map((part) => {
-                          if (part.type !== 'text') {
-                              return part
-                          }
-                          part.text = formattedInputPrompt
-                          return part
-                      })
-
-            const humanMessage = new HumanMessage({
-                content: finalMessageContent,
-                name: transformedMessage.name,
-                id: session.userId,
-                additional_kwargs: {
-                    ...transformedMessage.additional_kwargs
-                }
-            })
-
-            const preset =
-                command.promptType === 'instruction'
-                    ? command.prompt
-                    : ctx.chatluna.preset.getPreset(command.preset)
+            const preset = resolvePreset(
+                ctx,
+                command.promptType,
+                command.prompt,
+                command.preset
+            )
 
             const [chain, llm] = await ctx.chatluna_action_model
                 .getChain(
@@ -81,65 +55,24 @@ export function apply(ctx: Context, config: Config) {
                 )
                 .then((ref) => ref.value)
 
-            const chatLunaConfig = ctx.chatluna.config
+            const variables = buildChainVariables(ctx, session)
 
-            const result = await chain.invoke(
-                {
-                    input: humanMessage,
-                    chat_history: [],
-                    variables: {
-                        name: chatLunaConfig.botNames[0],
-                        date: new Date().toLocaleString(),
-                        bot_id: session.bot.selfId,
-                        is_group: (
-                            !session.isDirect || session.guildId != null
-                        ).toString(),
-                        is_private: session.isDirect?.toString(),
-                        user_id:
-                            session.author?.user?.id ??
-                            session.event?.user?.id ??
-                            '0',
-                        user: getNotEmptyString(
-                            session.author?.nick,
-                            session.author?.name,
-                            session.event.user?.name,
-                            session.username
-                        ),
-                        noop: '',
-                        time: new Date().toLocaleTimeString(),
-                        weekday: getCurrentWeekday()
-                    }
-                },
-                {
-                    metadata: {
-                        session,
-                        model: llm,
-                        userId: session.userId
-                    }
-                }
+            const result = await invokeChain(
+                chain,
+                llm,
+                humanMessage,
+                variables,
+                session
             )
 
             if (
                 typeof result.content === 'string' &&
-                result.content.length < 10
+                result.content.length < 30
             ) {
                 logger.debug(`Command result: ${result.content}`)
             }
 
-            const mdRenderer = await ctx.chatluna.renderer.getRenderer('text')
-
-            return await mdRenderer
-                .render(
-                    {
-                        content: result.content
-                    },
-                    {
-                        type: 'text'
-                    }
-                )
-                .then((rendered) => {
-                    return rendered.element
-                })
+            return await renderResult(ctx, result.content)
         })
     }
 
@@ -177,10 +110,27 @@ export function apply(ctx: Context, config: Config) {
             return
         }
 
-        const preset =
-            interceptCommand.promptType === 'instruction'
-                ? interceptCommand.prompt
-                : ctx.chatluna.preset.getPreset(interceptCommand.preset)
+        const transformedMessage =
+            await ctx.chatluna.messageTransformer.transform(
+                session,
+                session.elements,
+                interceptCommand.model
+            )
+
+        const humanMessage = await transformAndFormatMessage(
+            ctx,
+            session,
+            getMessageContent(transformedMessage.content),
+            interceptCommand.model,
+            interceptCommand.inputPrompt
+        )
+
+        const preset = resolvePreset(
+            ctx,
+            interceptCommand.promptType,
+            interceptCommand.prompt,
+            interceptCommand.preset
+        )
 
         const [chain, llm] = await ctx.chatluna_action_model
             .getChain(
@@ -191,75 +141,13 @@ export function apply(ctx: Context, config: Config) {
             )
             .then((ref) => ref.value)
 
-        const chatLunaConfig = ctx.chatluna.config
-
-        const transformedMessage =
-            await ctx.chatluna.messageTransformer.transform(
-                session,
-                session.elements,
-                interceptCommand.model
-            )
-
-        const inputPrompt = PromptTemplate.fromTemplate(
-            interceptCommand.inputPrompt ?? '{input}'
-        )
-
-        const formattedInputPrompt = await inputPrompt.format({
-            input: getMessageContent(transformedMessage.content)
-        })
-
-        const humanMessage = new HumanMessage({
-            content:
-                typeof transformedMessage.content === 'string'
-                    ? formattedInputPrompt
-                    : transformedMessage.content.map((part) => {
-                          if (part.type !== 'text') {
-                              return part
-                          }
-                          part.text = formattedInputPrompt
-                          return part
-                      }),
-            name: transformedMessage.name,
-            id: session.userId,
-            additional_kwargs: {
-                ...transformedMessage.additional_kwargs
-            }
-        })
-
-        const result = await chain.invoke(
-            {
-                input: humanMessage,
-                chat_history: [],
-                variables: {
-                    name: chatLunaConfig.botNames[0],
-                    date: new Date().toLocaleString(),
-                    bot_id: session.bot.selfId,
-                    is_group: (
-                        !session.isDirect || session.guildId != null
-                    ).toString(),
-                    is_private: session.isDirect?.toString(),
-                    user_id:
-                        session.author?.user?.id ??
-                        session.event?.user?.id ??
-                        '0',
-                    user: getNotEmptyString(
-                        session.author?.nick,
-                        session.author?.name,
-                        session.event.user?.name,
-                        session.username
-                    ),
-                    noop: '',
-                    time: new Date().toLocaleTimeString(),
-                    weekday: getCurrentWeekday()
-                }
-            },
-            {
-                metadata: {
-                    session,
-                    model: llm,
-                    userId: session.userId
-                }
-            }
+        const variables = buildChainVariables(ctx, session)
+        const result = await invokeChain(
+            chain,
+            llm,
+            humanMessage,
+            variables,
+            session
         )
 
         logger.debug(`Command result: ${result.content}`)

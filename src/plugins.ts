@@ -3,6 +3,7 @@ import { Config } from '.'
 // import start
 import { apply as commands } from './plugins/commands'
 import { apply as config } from './plugins/config'
+import { apply as tools } from './plugins/tools'
 // import end
 
 export async function plugins(ctx: Context, parent: Config) {
@@ -10,7 +11,7 @@ export async function plugins(ctx: Context, parent: Config) {
 
     const middlewares: Command[] =
         // middleware start
-        [commands, config] // middleware end
+        [commands, config, tools] // middleware end
 
     for (const middleware of middlewares) {
         await middleware(ctx, parent)
