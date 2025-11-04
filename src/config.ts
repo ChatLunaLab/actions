@@ -12,6 +12,7 @@ export interface Config {
         preset?: string
         inputPrompt?: string
         registerAsTool?: boolean
+        allowExecuteWithoutMessage?: boolean
     }[]
     interceptCommands: {
         interceptPosition: 'before' | 'after'
@@ -61,7 +62,10 @@ export const Config = Schema.intersect([
                     .description('自定义输入提示词'),
                 registerAsTool: Schema.boolean()
                     .default(false)
-                    .description('是否注册为 ChatLuna 工具')
+                    .description('是否注册为 ChatLuna 工具'),
+                allowExecuteWithoutMessage: Schema.boolean()
+                    .default(false)
+                    .description('是否允许无参数直接执行命令（引用消息时）')
             })
         )
             .default([])

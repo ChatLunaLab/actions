@@ -25,8 +25,11 @@ export function apply(ctx: Context, config: Config) {
                 return '此命令没有选择模型，请联系管理员配置模型并重置。'
             }
 
-            if ((message == null || message === '') && session.quote) {
-                message = '[ ]'
+            if (
+                ((message == null || message === '') && session.quote) ||
+                command.allowExecuteWithoutMessage
+            ) {
+                message = message || '[ ]'
             }
 
             if (!message) {
