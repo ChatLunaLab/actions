@@ -65,7 +65,7 @@ export const Config = Schema.intersect([
                     .description('是否注册为 ChatLuna 工具'),
                 allowExecuteWithoutMessage: Schema.boolean()
                     .default(false)
-                    .description('是否允许无参数直接执行命令（引用消息时）')
+                    .description('是否允许无参数直接执行命令')
             })
         )
             .default([])
