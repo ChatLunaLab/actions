@@ -1,11 +1,14 @@
 <template>
-    <div :class="$style.container" :style="containerPosition">
+    <div :class="[$style.container, isCollapsed ? $style.collapsed : '']" :style="containerPosition">
         <div
             :class="$style.header"
             @mousedown="startMove"
             @touchstart="startMove"
         >
             <IconMove :class="$style.move" />
+            <div :class="$style.toggle" @click="toggleCollapse" @mousedown.stop @touchstart.stop>
+                <IconChevronDown />
+            </div>
         </div>
         <div :class="$style.body">
             <div v-if="commands.length > 0" :class="$style.section">
@@ -53,7 +56,15 @@
 <script setup lang="ts">
 import { inject, reactive, onUnmounted, computed, ComputedRef, ref } from 'vue'
 import IconMove from '../icons/IconMove.vue'
+import IconChevronDown from '../icons/IconChevronDown.vue'
 import type { Config } from '../../src/config'
+
+const isCollapsed = ref(false)
+
+const toggleCollapse = (e: MouseEvent) => {
+    e.stopPropagation()
+    isCollapsed.value = !isCollapsed.value
+}
 
 const containerPosition = computed(() => {
     return {
@@ -252,7 +263,7 @@ const useCssModule = () => {
         border-bottom: 1px solid var(--k-color-divider, #ebeef5);
         background-color: var(--k-hover-bg);
         display: flex;
-        justify-content: center;
+        justify-content: space-between; /* Changed to space-between */
         align-items: center;
         cursor: move;
         transition: background-color 0.2s;
@@ -270,11 +281,25 @@ const useCssModule = () => {
                 color: var(--k-color-primary);
             }
         }
+
+        .toggle {
+            cursor: pointer;
+            color: var(--k-text-light);
+            transition: transform 0.3s ease, color 0.2s;
+            display: flex;
+            align-items: center;
+
+            &:hover {
+                color: var(--k-text-active);
+            }
+        }
     }
 
     .body {
         overflow-y: auto;
         padding: 4px 0;
+        transition: max-height 0.3s ease, opacity 0.3s ease;
+        opacity: 1;
 
         &::-webkit-scrollbar {
             width: 6px;
@@ -285,6 +310,25 @@ const useCssModule = () => {
         }
         &::-webkit-scrollbar-track {
             background: transparent;
+        }
+    }
+
+    &.collapsed {
+        max-height: 32px !important; /* Adjust based on header height */
+        
+        .header {
+            border-bottom: none;
+        }
+
+        .body {
+            max-height: 0;
+            padding: 0;
+            opacity: 0;
+            overflow: hidden;
+        }
+
+        .toggle {
+            transform: rotate(-90deg);
         }
     }
 
