@@ -222,7 +222,8 @@ const useCssModule = () => {
     position: absolute;
     z-index: 1000;
     width: 200px;
-    max-height: 70vh;
+    max-width: 90vw; /* Max width constraint */
+    max-height: 70vh; /* Max height constraint */
     background: var(--k-card-bg);
     border-radius: 8px;
     box-shadow: var(--k-card-shadow);
@@ -235,6 +236,12 @@ const useCssModule = () => {
     user-select: none;
     overflow: hidden;
     transition: box-shadow 0.3s ease;
+
+    /* Mobile adaptation */
+    @media (max-width: 768px) {
+        width: 160px; /* Smaller default width on mobile */
+        max-height: 50vh; /* Smaller max height on mobile */
+    }
 
     &:hover {
         box-shadow: var(--k-card-shadow-hover, 0 4px 16px rgba(0, 0, 0, 0.15));
@@ -303,9 +310,10 @@ const useCssModule = () => {
         transition:
             background-color 0.2s,
             color 0.2s;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        /* Word wrap changes */
+        white-space: normal; /* Allow wrapping */
+        word-break: break-word; /* Break long words */
+        overflow-wrap: anywhere; /* Ensure wrapping happens */
         border-left: 3px solid transparent;
 
         &:hover {
