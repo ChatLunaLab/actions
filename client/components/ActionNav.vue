@@ -16,15 +16,16 @@
                 <div
                     v-for="(item, i) in commands"
                     :key="'cmd-' + i"
+                    v-show="item?.command"
                     :class="[
                         $style.item,
-                        activeItem === 'cmd-' + item.command
+                        activeItem === 'cmd-' + item?.command
                             ? $style.active
                             : ''
                     ]"
-                    @click="toCmd(item.command, 'commands')"
+                    @click="toCmd(item?.command, 'commands')"
                 >
-                    {{ item.command }}
+                    {{ item?.command }}
                 </div>
             </div>
             <div v-if="interceptCommands.length > 0" :class="$style.section">
@@ -32,15 +33,16 @@
                 <div
                     v-for="(item, i) in interceptCommands"
                     :key="'int-' + i"
+                    v-show="item?.command"
                     :class="[
                         $style.item,
-                        activeItem === 'int-' + item.command
+                        activeItem === 'int-' + item?.command
                             ? $style.active
                             : ''
                     ]"
-                    @click="toCmd(item.command, 'interceptCommands')"
+                    @click="toCmd(item?.command, 'interceptCommands')"
                 >
-                    {{ item.command }}
+                    {{ item?.command }}
                 </div>
             </div>
             <div
@@ -54,7 +56,7 @@
 </template>
 
 <script setup lang="ts">
-import { inject, reactive, onUnmounted, computed, ComputedRef, ref } from 'vue'
+import { inject, reactive, onUnmounted, computed, ComputedRef, ref, watch } from 'vue'
 import IconMove from '../icons/IconMove.vue'
 import IconChevronDown from '../icons/IconChevronDown.vue'
 import type { Config } from '../../src/config'
@@ -167,6 +169,7 @@ onUnmounted(() => {
     window.removeEventListener('mouseup', endMove)
     window.removeEventListener('touchmove', onMousemove)
     window.removeEventListener('touchend', endMove)
+    observer?.disconnect()
 })
 
 const current = inject<ComputedRef<{ config: Config }>>(
@@ -179,7 +182,9 @@ const interceptCommands = computed(
 
 const activeItem = ref('')
 
-const toCmd = (cmd: string, type: 'commands' | 'interceptCommands') => {
+const toCmd = (cmd: string | undefined, type: 'commands' | 'interceptCommands') => {
+    if (!cmd) return
+
     activeItem.value = (type === 'commands' ? 'cmd-' : 'int-') + cmd
 
     // Find the element in the DOM
@@ -216,6 +221,65 @@ const toCmd = (cmd: string, type: 'commands' | 'interceptCommands') => {
         }
     }
 }
+
+// Scroll Spy Logic
+const elementMap = new Map<Element, string>()
+let observer: IntersectionObserver | null = null
+
+const initObserver = () => {
+    if (observer) {
+        observer.disconnect()
+        elementMap.clear()
+    }
+
+    const options = {
+        root: null, // Use viewport
+        rootMargin: '-40% 0px -40% 0px', // Trigger in the middle 20% of screen
+        threshold: 0
+    }
+
+    observer = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+            if (entry.isIntersecting) {
+                const id = elementMap.get(entry.target)
+                if (id) {
+                    activeItem.value = id
+                }
+            }
+        }
+    }, options)
+
+    // Helper to scan DOM
+    const scan = (list: any[], prefix: string, type: string) => {
+        if (!list.length) return
+        const nodes = document.querySelectorAll('.k-schema-left')
+        for (let i = 0; i < nodes.length; i++) {
+            const item = nodes[i] as HTMLElement
+            const input = item.nextElementSibling?.querySelector('input')
+            if (input) {
+                const val = input.value
+                if (!val) continue
+                const found = list.find(c => c?.command === val)
+                if (found) {
+                     if (item.innerHTML.includes(`${type}[`) && item.innerHTML.includes('command')) {
+                         const id = prefix + val
+                         observer?.observe(item)
+                         elementMap.set(item, id)
+                     }
+                }
+            }
+        }
+    }
+
+    scan(commands.value, 'cmd-', 'commands')
+    scan(interceptCommands.value, 'int-', 'interceptCommands')
+}
+
+// Watch for data changes to re-init observer
+watch(() => [commands.value, interceptCommands.value], () => {
+    // Delay to allow DOM to update
+    setTimeout(initObserver, 1000) 
+}, { immediate: true })
 
 // Use CSS Module for class names
 const useCssModule = () => {
